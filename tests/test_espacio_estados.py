@@ -5,7 +5,7 @@ import math
 import unittest
 
 from src.busqueda import AgenteDFS
-from src.escenarios import crear_caso_base, crear_escenario
+from src.escenarios import ESCENARIOS, crear_caso_base, crear_escenario
 from src.espacio_estados import calcular, horarios_validos
 from src.modelo import Asignacion, EstadoHorario, Materia
 from src.verificacion import verificar
@@ -69,6 +69,38 @@ class CifrasDelReporteTests(unittest.TestCase):
         self.assertGreater(e.sin_restricciones, e.con_r1)
         self.assertGreater(e.con_r1, e.con_r1_r3_r4)
         self.assertGreater(e.con_r1_r3_r4, e.validos)
+
+
+class HorariosValidosPorCasoTests(unittest.TestCase):
+    """Nivel 4 del espacio de estados para cada caso de resultados."""
+
+    ESPERADO = {
+        "base": 149_507_400_888,
+        "docente_restringido": 24_255_194_220,
+        "septimos_saturados": 116_114_906_919,
+        "sin_solucion": 0,
+    }
+
+    @classmethod
+    def setUpClass(cls):
+        cls.conteos = {
+            clave: horarios_validos(crear()) for clave, crear in ESCENARIOS.items()
+        }
+
+    def test_horarios_validos_de_cada_caso(self):
+        self.assertEqual(self.conteos, self.ESPERADO)
+
+    def test_hay_solucion_si_y_solo_si_hay_horarios_validos(self):
+        for clave, crear in ESCENARIOS.items():
+            with self.subTest(caso=clave):
+                encontrado = AgenteDFS(crear(), registrar_eventos=False).resolver()
+                self.assertEqual(encontrado.encontrado, self.conteos[clave] > 0)
+
+    def test_el_caso_3_conserva_mas_soluciones_que_el_caso_2(self):
+        """Respaldo del hallazgo: más ocupaciones no implica menos soluciones."""
+        self.assertGreater(
+            self.conteos["septimos_saturados"], 4 * self.conteos["docente_restringido"]
+        )
 
 
 class ConteoContraFuerzaBrutaTests(unittest.TestCase):
