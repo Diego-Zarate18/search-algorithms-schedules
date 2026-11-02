@@ -1,6 +1,8 @@
 # Grafo de conocimiento local (fuente de la verdad del equipo; no se versiona)
 .conocimiento/
 
+/docs/
+
 # Python
 __pycache__/
 *.py[cod]
