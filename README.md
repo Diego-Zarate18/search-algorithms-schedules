@@ -28,9 +28,13 @@ Detalle completo en [`docs/propuesta_registrada.md`](docs/propuesta_registrada.m
 Todos los comandos se ejecutan **desde la raíz del proyecto** (el código es el paquete `src`):
 
 ```bash
-python -m src.main        # abre la interfaz (pendiente de implementar)
-python -m unittest -v     # ejecuta las pruebas
+python -m src.main              # abre la interfaz (elegir caso → Ejecutar búsqueda → reproducir)
+python -m src.espacio_estados   # tamaño del espacio de estados por niveles
+python -m src.resultados        # resumen de los casos en salidas/resultados/
+python -m unittest -v           # ejecuta las pruebas
 ```
+
+En la interfaz: **Espacio** reproduce o pausa, **←/→** avanzan un paso, **Inicio** reinicia y **Fin** va al final. Si el intérprete no tiene Tkinter, `src.main` explica cómo instalarlo.
 
 ## Estructura
 
@@ -44,8 +48,11 @@ python -m unittest -v     # ejecuta las pruebas
 │   ├── busqueda.py       agente DFS + eventos para la interfaz
 │   ├── metricas.py       estados explorados, retrocesos por nivel y tiempo
 │   ├── verificacion.py   verificación final independiente
-│   ├── graficas.py       gráficas con matplotlib
-│   └── interfaz.py       interfaz Tkinter que reproduce la búsqueda paso a paso
+│   ├── reproduccion.py   recorrido paso a paso de la traza de eventos (sin Tkinter)
+│   ├── interfaz.py       interfaz Tkinter que reproduce la búsqueda paso a paso
+│   ├── espacio_estados.py  tamaño del espacio de estados por niveles
+│   ├── resultados.py     resumen por caso (métricas, horarios válidos y horario final)
+│   └── graficas.py       gráficas con matplotlib
 ├── tests/                pruebas unitarias
 └── salidas/              gráficas y resultados generados (no se versionan)
 ```
@@ -58,4 +65,6 @@ python -m unittest -v     # ejecuta las pruebas
 | Restricciones (R1–R4) y agente DFS con eventos | listo (reproduce el caso 1) |
 | Verificación final independiente | listo |
 | Casos 2–4 y escenarios mini | listo |
-| Gráficas e interfaz | pendiente |
+| Interfaz Tkinter con reproducción paso a paso | listo |
+| Espacio de estados y resumen de resultados | listo |
+| Gráficas | pendiente |
