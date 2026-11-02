@@ -51,7 +51,7 @@ La carga semanal suma 35 h, que multiplicadas por 15 semanas dan las 525 h del c
 - Aulas y laboratorio: fuera del modelo; el grupo siempre ocupa su propia aula.
 
 ### 2.5 Matriz de ocupaciones previas de docentes
-Bloques en los que cada docente ya imparte clase a otros grupos y, por lo tanto, no está disponible para 7° "A". Es un escenario ficticio pero verosímil, calibrado con un prototipo para que **tenga solución** y **obligue a retroceder**.
+Bloques en los que cada docente ya imparte clase a otros grupos y, por lo tanto, no está disponible para 7° "A". Es un escenario ficticio pero verosímil, calibrado para que **tenga solución** y **obligue a retroceder**.
 
 | Docente | Bloques ocupados |
 |---|---|
@@ -143,8 +143,10 @@ El motivo se muestra en la interfaz y se usa en el reporte.
 ### 3.7 Eventos de la búsqueda
 La búsqueda se ejecuta completa **antes** de mostrar la ventana y guarda una lista de eventos (`PROBAR`, `ACEPTAR`, `RECHAZAR`, `RETROCEDER`, `SOLUCION`, `SIN_SOLUCION`), cada uno con nivel, sesión, bloque y motivo. La interfaz los reproduce con `after()`. Así la ventana no se congela y la búsqueda queda separada de la interfaz.
 
-### 3.8 Resultado de referencia del prototipo
-Con los datos del caso 1 (sección 2.5), un prototipo de validación obtuvo:
+La reproducción vive en `src/reproduccion.py` (clase `Reproductor`), sin dependencias de Tkinter, para poder probarla de forma automática. Aplica los eventos uno por uno, permite avanzar y retroceder, y mantiene el horario parcial, el último paso, los contadores y una bitácora. `src/interfaz.py` solo dibuja ese estado y ofrece los controles: reproducir/pausar, paso anterior y siguiente, reiniciar, ir al final, velocidad de 1 a 2 000 pasos por segundo y atajos de teclado (Espacio, ←, →, Inicio, Fin). Cada paso se marca con texto además de color: PROBANDO, ACEPTADA, RECHAZO con la regla incumplida y RETROCESO.
+
+### 3.8 Resultado de referencia del caso 1
+Con los datos del caso 1 (sección 2.5), el agente obtiene:
 - Solución encontrada: **sí** (18/18 sesiones, 0 conflictos).
 - Estados explorados: **1 834**.
 - Retrocesos: **83**, concentrados en los niveles 12 a 16: 1, 3, 16, 21 y 42, en las sesiones de Inglés, Habilidades Gerenciales y Formulación de Proyectos.
@@ -156,21 +158,33 @@ Con los datos del caso 1 (sección 2.5), un prototipo de validación obtuvo:
 | **B3** 12–14 | M4.1 | M3.2 | M2.3 | M6.1 | M6.2 |
 | **B4** 14–16 | M3.1 | M4.2 | M4.3 (1 h) | libre | libre |
 
-La implementación final debe reproducir exactamente estos valores, porque la búsqueda es determinista. Esto sirve como prueba de correctitud.
+Como la búsqueda es determinista, estos valores se reproducen exactamente en cada ejecución. `tests/test_busqueda.py` los verifica como prueba de correctitud.
 
 ### 3.9 Tamaño del espacio de estados
-La plantilla pide el tamaño y su proceso de cálculo. Se calcula por niveles, agregando restricciones:
+La plantilla pide el tamaño y su proceso de cálculo. Se calcula por niveles, agregando restricciones. Todas las cifras se reproducen con `python -m src.espacio_estados`.
 
 | Nivel | Consideración | Horarios completos |
 |---|---|---|
-| 1 | Cada una de las 18 sesiones en cualquiera de los 20 bloques: $20^{18}$ | ≈ 2.62 × 10²³ |
-| 2 | + R1 (bloques distintos): $P(20,18) = 20!/2!$ | ≈ 1.22 × 10¹⁸ |
+| 1 | Cada una de las 18 sesiones en cualquiera de los 20 bloques: $20^{18}$ | 262 144 000 000 000 000 000 000 ≈ 2.62 × 10²³ |
+| 2 | + R1 (bloques distintos): $P(20,18) = 20!/2!$ | 1 216 451 004 088 320 000 ≈ 1.22 × 10¹⁸ |
 | 3 | + R3 y R4, sin ocupaciones de docentes | 24 156 610 560 000 ≈ 2.4 × 10¹³ |
+| 4 | + R2: horarios válidos de cada caso | ver tabla siguiente |
 
-- El nivel 3 es un conteo exacto por programación dinámica: se recorre materia por materia y, para cada combinación de bloques ya usados, se cuentan las formas válidas de colocar la siguiente materia.
-- Cota de estados parciales (nodos del árbol) con R1: $\sum_{k=0}^{18} P(20,k) \approx 1.75 \times 10^{18}$.
-- Las ocupaciones de los docentes (R2) reducen aún más el espacio, en distinta medida para cada caso.
-- Argumento para el reporte: hay billones de horarios posibles y el DFS encuentra uno válido evaluando 1 834 candidatos (caso 1), porque descarta ramas completas en cuanto detecta un conflicto.
+| Caso | Horarios válidos (nivel 4) |
+|---|---|
+| 1. Base | 149 507 400 888 ≈ 1.5 × 10¹¹ |
+| 2. Docente restringido | 24 255 194 220 ≈ 2.4 × 10¹⁰ |
+| 3. Séptimos saturados | 116 114 906 919 ≈ 1.2 × 10¹¹ |
+| 4. Sin solución | 0 |
+
+- **Cómo se cuentan los niveles 3 y 4.** Es un conteo exacto por programación dinámica que recorre la semana **día por día**:
+  - Por R3, cada materia tiene a lo más una sesión por día.
+  - Por R4, las sesiones equivalentes de una materia quedan determinadas por el conjunto de días que ocupan.
+  - Basta entonces decidir, para cada día, qué materias tienen sesión y contar de cuántas formas caben en bloques distintos y libres para su docente.
+
+  El cálculo tarda alrededor de medio segundo. `tests/test_espacio_estados.py` lo contrasta con una enumeración por fuerza bruta en escenarios reducidos.
+- **Cota de estados parciales** (nodos del árbol) con R1: $\sum_{k=0}^{18} P(20,k) \approx 1.75 \times 10^{18}$.
+- **Argumento para el reporte:** hay billones de horarios posibles y el DFS encuentra uno válido evaluando 1 834 candidatos (caso 1), porque descarta ramas completas en cuanto detecta un conflicto.
 
 ---
 
@@ -182,14 +196,17 @@ La plantilla pide el tamaño y su proceso de cálculo. Se calcula por niveles, a
 ├── src/
 │   ├── main.py              punto de entrada (python -m src.main)
 │   ├── modelo.py            Materia, Sesion, BloqueHorario, Asignacion, EstadoHorario, Escenario
-│   ├── escenarios.py        datos de los casos y constructor de escenarios
+│   ├── escenarios.py        datos de los 4 casos y de los 2 escenarios mini
 │   ├── restricciones.py     R1–R4; validar(...) -> MotivoRechazo | None
-│   ├── busqueda.py          AgenteDFS, TipoEvento, Evento
+│   ├── busqueda.py          AgenteDFS, TipoEvento, Evento, Resultado
 │   ├── metricas.py          Metricas (explorados, retrocesos por nivel, tiempo)
 │   ├── verificacion.py      verificación final independiente (métricas 1–3)
-│   ├── graficas.py          matplotlib
-│   └── interfaz.py          Tkinter; reproduce los eventos
-├── tests/                   pruebas por módulo + reproducción del caso 1
+│   ├── reproduccion.py      Reproductor: recorre la traza de eventos (sin Tkinter)
+│   ├── interfaz.py          Tkinter; dibuja el estado del reproductor
+│   ├── espacio_estados.py   tamaño del espacio de estados por niveles (python -m src.espacio_estados)
+│   ├── resultados.py        resumen por caso en salidas/resultados/ (python -m src.resultados)
+│   └── graficas.py          matplotlib
+├── tests/                   pruebas por módulo + reproducción exacta de los casos
 └── salidas/                 gráficas y resultados generados (no versionados)
 ```
 
@@ -200,18 +217,19 @@ Principios:
 - **`BloqueHorario` incluye `indice_dia`**, que se necesita para aplicar R4.
 - **`Escenario.validar_integridad()` revisa la consistencia de los datos y no su tamaño**, para aceptar los escenarios mini. Rechaza ocupaciones con docentes o bloques inexistentes.
 - **`verificacion.py` no reutiliza el validador incremental.** Es una comprobación independiente del resultado.
+- **`reproduccion.py` no depende de Tkinter.** La interfaz solo dibuja, así que la lógica de reproducción se prueba de forma automática; las pruebas de la interfaz se omiten si no hay Tkinter o pantalla.
 
 ---
 
 ## 5. Casos de Resultados
-La plantilla exige al menos tres ejemplos **resueltos** y no triviales. Los cuatro casos comparten materias, días y bloques; solo cambian las ocupaciones de los docentes (`src/escenarios.py`). Los resultados están fijados en `tests/test_escenarios.py`.
+La plantilla exige al menos tres ejemplos **resueltos** y no triviales. Los cuatro casos comparten materias, días y bloques; solo cambian las ocupaciones de los docentes (`src/escenarios.py`). Los resultados están fijados en `tests/test_escenarios.py` y los horarios válidos en `tests/test_espacio_estados.py`. `python -m src.resultados` genera estas tablas en `salidas/resultados/resumen.md`.
 
-| Caso | Escenario | Ocupaciones | Explorados | Retrocesos | Eventos | Solución |
-|---|---|---|---|---|---|---|
-| 1. Base | Ocupaciones moderadas (sección 2.5) | 31 | 1 834 | 83 | 3 752 | sí |
-| 2. Docente restringido | Como el base, pero D6 (Formulación) **solo puede martes y jueves** | 39 | 10 611 | 522 | 21 745 | sí |
-| 3. Séptimos saturados | Cada docente da su materia también a 7° B y 7° C | 36 | 692 | 26 | 1 411 | sí |
-| 4. Sin solución | Como el base, pero D1 (IA) **solo puede martes y jueves** | 38 | 500 | 24 | 1 025 | no |
+| Caso | Escenario | Ocupaciones | Explorados | Retrocesos | Eventos | Horarios válidos | Solución |
+|---|---|---|---|---|---|---|---|
+| 1. Base | Ocupaciones moderadas (sección 2.5) | 31 | 1 834 | 83 | 3 752 | 149 507 400 888 | sí |
+| 2. Docente restringido | Como el base, pero D6 (Formulación) **solo puede martes y jueves** | 39 | 10 611 | 522 | 21 745 | 24 255 194 220 | sí |
+| 3. Séptimos saturados | Cada docente da su materia también a 7° B y 7° C | 36 | 692 | 26 | 1 411 | 116 114 906 919 | sí |
+| 4. Sin solución | Como el base, pero D1 (IA) **solo puede martes y jueves** | 38 | 500 | 24 | 1 025 | 0 | no |
 
 Retrocesos por nivel (nivel = índice de la sesión, 0–17):
 
@@ -236,6 +254,8 @@ La diferencia está en **dónde** caen las restricciones respecto al orden fijo 
 - En el caso 3 están repartidas entre todos los docentes, así que el agente descarta antes las opciones malas.
 - En el caso 2 se concentran en una materia que se programa casi al final, y el agente descubre el conflicto tarde, después de haber construido mucho horario que luego tiene que deshacer.
 
+El conteo de horarios válidos (sección 3.9) lo confirma: el caso 3 conserva unos 116 mil millones de horarios válidos, casi 5 veces los del caso 2 (unos 24 mil millones), a pesar de tener casi las mismas ocupaciones.
+
 Esto ilustra la limitación central de la búsqueda no informada: el orden en que se recorre el problema no aprovecha lo que ya se sabe de las restricciones. Es justo lo que corregiría una heurística como MRV (empezar por la sesión con menos opciones), que queda como trabajo futuro.
 
 ---
@@ -250,7 +270,7 @@ Dos escenarios reducidos (`ESCENARIOS_MINI` en `src/escenarios.py`) para seguir 
 | Mini A — Sin retroceso | ninguna | 6 | 0 | 13 | M1.1 Lu-B1 · M1.2 Ma-B1 · M2.1 Lu-B2 |
 | Mini B — Con retroceso | D2 ocupado en Lu-B2 y Ma-B2 | 12 | 1 | 26 | M1.1 Lu-B1 · M1.2 Ma-B2 · M2.1 Ma-B1 |
 
-En el Mini B, M2.1 no cabe con M1.2 en Ma-B1: los bloques B1 están ocupados por el grupo y los B2 por el docente. El agente deshace M1.2, la mueve a Ma-B2 y entonces M2.1 entra en Ma-B1. La secuencia completa de pasos de ambos escenarios está fijada en `tests/test_escenarios.py`, para comparar con la traza hecha a mano.
+En el Mini B, M2.1 no cabe con M1.2 en Ma-B1: los bloques B1 están ocupados por el grupo y los B2 por el docente. El agente deshace M1.2, la mueve a Ma-B2 y entonces M2.1 entra en Ma-B1. La secuencia completa de pasos de ambos escenarios está fijada en `tests/test_escenarios.py`, para comparar con la traza hecha a mano. Ambos se pueden elegir en el selector de la interfaz y seguir paso a paso.
 
 ---
 
