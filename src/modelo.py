@@ -1,80 +1,104 @@
-"""Entidades del problema de generación de horarios."""
+"""Entidades del problema de generación de horarios.
+
+Este módulo solo describe y almacena datos. Las reglas del problema
+(R1–R4) viven exclusivamente en ``restricciones.py``.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from time import perf_counter
 from typing import Iterable
 
 
 @dataclass(frozen=True)
 class Materia:
-    """Materia que debe programarse para un grupo."""
+    """Materia que debe programarse para el grupo.
+
+    ``duraciones`` indica la duración en horas de cada sesión, en orden.
+    Por ejemplo, ``(2, 2, 2)`` son tres sesiones de dos horas.
+    """
 
     id: str
     nombre: str
     docente: str
-    horas_semana: int
+    duraciones: tuple[int, ...]
+
+    @property
+    def horas_semana(self) -> int:
+        """Carga semanal de la materia, derivada de sus sesiones."""
+        return sum(self.duraciones)
 
 
 @dataclass(frozen=True)
 class Sesion:
-    """Sesión de una materia que ocupará un bloque horario."""
+    """Sesión de una materia que ocupará un bloque horario completo."""
 
     id: str
     materia: Materia
     numero: int
     duracion_horas: int
 
+    @property
+    def docente(self) -> str:
+        """Docente que imparte la sesión."""
+        return self.materia.docente
+
 
 @dataclass(frozen=True)
 class BloqueHorario:
-    """Bloque de dos horas disponible dentro de la jornada."""
+    """Bloque de dos horas dentro de la jornada.
+
+    ``indice_dia`` permite comparar días (Lu=0 … Vi=4), necesario para la
+    restricción de orden de sesiones.
+    """
 
     dia: str
+    indice_dia: int
     id: str
     hora_inicio: str
     hora_fin: str
 
     @property
     def clave(self) -> tuple[str, str]:
-        """Devuelve la clave estable usada para identificar el bloque."""
+        """Clave estable del bloque, por ejemplo ``("Lu", "B1")``."""
         return self.dia, self.id
+
+    @property
+    def etiqueta(self) -> str:
+        """Etiqueta legible del bloque, por ejemplo ``"Lu-B1"``."""
+        return f"{self.dia}-{self.id}"
 
 
 @dataclass(frozen=True)
 class Asignacion:
-    """Ubicación de una sesión dentro del horario del grupo."""
+    """Elemento del estado: una sesión ubicada en un bloque.
+
+    El aula no forma parte de la asignación: el grupo tiene su propia
+    aula y el problema consiste únicamente en ordenar el horario.
+    """
 
     sesion: Sesion
     bloque: BloqueHorario
-    aula: str
 
 
 @dataclass
 class EstadoHorario:
-    """Estado parcial o completo del horario generado."""
+    """Estado parcial o completo del horario: S = {(sesión, bloque)}.
+
+    No valida reglas del problema; solo almacena asignaciones y ofrece
+    consultas rápidas para el validador y la interfaz.
+    """
 
     asignaciones: dict[str, Asignacion] = field(default_factory=dict)
 
     def agregar(self, asignacion: Asignacion) -> None:
-        """Agrega una asignación y rechaza sesiones o bloques duplicados."""
+        """Agrega una asignación. Una sesión no puede asignarse dos veces."""
         if asignacion.sesion.id in self.asignaciones:
             raise ValueError(f"La sesión ya está asignada: {asignacion.sesion.id}")
-
-        if any(
-            existente.bloque.clave == asignacion.bloque.clave
-            for existente in self.asignaciones.values()
-        ):
-            raise ValueError(
-                f"El bloque ya está ocupado: {asignacion.bloque.dia}-"
-                f"{asignacion.bloque.id}"
-            )
-
         self.asignaciones[asignacion.sesion.id] = asignacion
 
     def remover(self, sesion: Sesion) -> Asignacion:
-        """Remueve y devuelve la asignación de una sesión."""
+        """Remueve y devuelve la asignación de una sesión (retroceso)."""
         try:
             return self.asignaciones.pop(sesion.id)
         except KeyError as error:
@@ -84,61 +108,42 @@ class EstadoHorario:
         """Indica si la sesión ya forma parte del estado."""
         return sesion.id in self.asignaciones
 
-    def bloque_ocupado(self, bloque: BloqueHorario) -> bool:
-        """Indica si el grupo ya usa el bloque indicado."""
-        return any(
-            asignacion.bloque.clave == bloque.clave
-            for asignacion in self.asignaciones.values()
-        )
+    def asignacion_de(self, sesion_id: str) -> Asignacion | None:
+        """Devuelve la asignación de una sesión, o ``None`` si no existe."""
+        return self.asignaciones.get(sesion_id)
+
+    def sesion_en(self, bloque: BloqueHorario) -> Asignacion | None:
+        """Devuelve la asignación que ocupa el bloque, o ``None``."""
+        for asignacion in self.asignaciones.values():
+            if asignacion.bloque.clave == bloque.clave:
+                return asignacion
+        return None
 
     def por_materia(self, materia_id: str) -> tuple[Asignacion, ...]:
-        """Devuelve las asignaciones actuales de una materia."""
+        """Asignaciones actuales de una materia."""
         return tuple(
             asignacion
             for asignacion in self.asignaciones.values()
             if asignacion.sesion.materia.id == materia_id
         )
 
-    def copiar(self) -> "EstadoHorario":
-        """Devuelve una copia independiente del estado actual."""
-        return EstadoHorario(asignaciones=dict(self.asignaciones))
-
     @property
     def cantidad(self) -> int:
-        """Devuelve el número de sesiones asignadas."""
+        """Número de sesiones asignadas."""
         return len(self.asignaciones)
-
-
-@dataclass
-class Metricas:
-    """Contadores que utilizará posteriormente el algoritmo de búsqueda."""
-
-    estados_explorados: int = 0
-    retrocesos: int = 0
-    retrocesos_por_nivel: dict[int, int] = field(default_factory=dict)
-    tiempo_segundos: float = 0.0
-
-    def iniciar_cronometro(self) -> float:
-        """Devuelve una marca de tiempo para iniciar una medición."""
-        return perf_counter()
-
-    def finalizar_cronometro(self, inicio: float) -> None:
-        """Acumula el tiempo transcurrido desde una marca de tiempo."""
-        self.tiempo_segundos = perf_counter() - inicio
-
-    def registrar_retroceso(self, nivel: int) -> None:
-        """Registra un retroceso total y lo asocia con un nivel del árbol."""
-        self.retrocesos += 1
-        self.retrocesos_por_nivel[nivel] = (
-            self.retrocesos_por_nivel.get(nivel, 0) + 1
-        )
 
 
 @dataclass(frozen=True)
 class Escenario:
-    """Datos inmutables de un escenario de programación."""
+    """Datos inmutables de un caso de programación.
+
+    ``grupo`` y ``aula`` son datos descriptivos (se muestran en la
+    interfaz); no intervienen en la búsqueda.
+    ``ocupaciones_docentes`` contiene tuplas ``(docente, dia, bloque_id)``.
+    """
 
     nombre: str
+    descripcion: str
     grupo: str
     aula: str
     materias: tuple[Materia, ...]
@@ -146,52 +151,86 @@ class Escenario:
     bloques: tuple[BloqueHorario, ...]
     ocupaciones_docentes: frozenset[tuple[str, str, str]]
 
-    def ocupacion_docente(
-        self, docente: str, bloque: BloqueHorario
-    ) -> bool:
-        """Indica si un docente está ocupado en el bloque indicado."""
+    def docente_ocupado(self, docente: str, bloque: BloqueHorario) -> bool:
+        """Indica si el docente está ocupado con otro grupo en el bloque."""
         return (docente, bloque.dia, bloque.id) in self.ocupaciones_docentes
 
     def sesiones_de(self, materia_id: str) -> tuple[Sesion, ...]:
-        """Devuelve las sesiones de una materia en su orden de creación."""
-        return tuple(
-            sesion for sesion in self.sesiones if sesion.materia.id == materia_id
-        )
+        """Sesiones de una materia en su orden de creación."""
+        return tuple(s for s in self.sesiones if s.materia.id == materia_id)
+
+    @property
+    def docentes(self) -> tuple[str, ...]:
+        """Docentes de las materias del escenario, sin repetir."""
+        return tuple(dict.fromkeys(m.docente for m in self.materias))
 
     def validar_integridad(self) -> None:
-        """Comprueba las invariantes básicas de los datos del escenario."""
-        if len(self.materias) != 7:
-            raise ValueError("El escenario debe contener exactamente 7 materias.")
+        """Comprueba la consistencia de los datos (no su tamaño).
 
-        if len(self.sesiones) != 18:
-            raise ValueError("El escenario debe contener exactamente 18 sesiones.")
+        Acepta escenarios de cualquier tamaño (incluidos los escenarios
+        mini para trazas manuales). Los conteos del caso base (7, 18, 20)
+        se comprueban en las pruebas.
+        """
+        if not self.materias or not self.sesiones or not self.bloques:
+            raise ValueError("El escenario necesita materias, sesiones y bloques.")
 
-        if len(self.bloques) != 20:
-            raise ValueError("El escenario debe contener exactamente 20 bloques.")
+        _sin_duplicados((m.id for m in self.materias), "materias")
+        _sin_duplicados((s.id for s in self.sesiones), "sesiones")
+        _sin_duplicados((b.clave for b in self.bloques), "bloques")
 
-        horas_por_materia = {
-            materia.id: sum(
-                sesion.duracion_horas
-                for sesion in self.sesiones
-                if sesion.materia.id == materia.id
-            )
-            for materia in self.materias
-        }
         for materia in self.materias:
-            if horas_por_materia[materia.id] != materia.horas_semana:
+            if not materia.duraciones or any(d <= 0 for d in materia.duraciones):
+                raise ValueError(f"Duraciones inválidas en {materia.id}.")
+            if any(d > 2 for d in materia.duraciones):
                 raise ValueError(
-                    f"La carga de {materia.id} no coincide con sus sesiones."
+                    f"Una sesión de {materia.id} excede el bloque de 2 horas."
                 )
 
-        ids_sesiones = [sesion.id for sesion in self.sesiones]
-        if len(ids_sesiones) != len(set(ids_sesiones)):
-            raise ValueError("Las sesiones deben tener identificadores únicos.")
+        if self.sesiones != generar_sesiones(self.materias):
+            raise ValueError(
+                "Las sesiones no coinciden con las duraciones de las materias "
+                "o no siguen el orden fijo de búsqueda."
+            )
 
-        ids_bloques = [bloque.clave for bloque in self.bloques]
-        if len(ids_bloques) != len(set(ids_bloques)):
-            raise ValueError("Los bloques deben tener identificadores únicos.")
+        indices_por_dia: dict[str, int] = {}
+        for bloque in self.bloques:
+            previo = indices_por_dia.setdefault(bloque.dia, bloque.indice_dia)
+            if previo != bloque.indice_dia:
+                raise ValueError(f"El día {bloque.dia} tiene índices distintos.")
+        if len(set(indices_por_dia.values())) != len(indices_por_dia):
+            raise ValueError("Dos días comparten el mismo índice.")
+
+        claves_bloques = {b.clave for b in self.bloques}
+        docentes = set(self.docentes)
+        for docente, dia, bloque_id in self.ocupaciones_docentes:
+            if docente not in docentes:
+                raise ValueError(f"Ocupación de un docente inexistente: {docente}.")
+            if (dia, bloque_id) not in claves_bloques:
+                raise ValueError(
+                    f"Ocupación en un bloque inexistente: {dia}-{bloque_id}."
+                )
+
+
+def generar_sesiones(materias: Iterable[Materia]) -> tuple[Sesion, ...]:
+    """Genera las sesiones en el orden fijo de búsqueda (materia por materia)."""
+    return tuple(
+        Sesion(
+            id=f"{materia.id}.{numero}",
+            materia=materia,
+            numero=numero,
+            duracion_horas=duracion,
+        )
+        for materia in materias
+        for numero, duracion in enumerate(materia.duraciones, start=1)
+    )
 
 
 def total_horas(sesiones: Iterable[Sesion]) -> int:
-    """Devuelve la suma de horas de las sesiones recibidas."""
+    """Suma de horas de las sesiones recibidas."""
     return sum(sesion.duracion_horas for sesion in sesiones)
+
+
+def _sin_duplicados(valores: Iterable[object], que: str) -> None:
+    lista = list(valores)
+    if len(lista) != len(set(lista)):
+        raise ValueError(f"Hay identificadores repetidos en {que}.")
