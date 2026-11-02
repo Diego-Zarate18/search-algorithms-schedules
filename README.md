@@ -56,6 +56,6 @@ python -m unittest -v     # ejecuta las pruebas
 |---|---|
 | Modelo y escenario base | listo |
 | Restricciones (R1–R4) y agente DFS con eventos | listo (reproduce el caso 1) |
-| Verificación final | pendiente |
+| Verificación final independiente | listo |
 | Casos 2–4 | pendiente (se calibran con la búsqueda) |
 | Gráficas e interfaz | pendiente |
