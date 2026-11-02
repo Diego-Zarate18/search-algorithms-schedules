@@ -16,7 +16,7 @@ Proyecto de la materia Fundamentos de Inteligencia Artificial (U2).
   3. **R3 Distribución:** una materia tiene como máximo una sesión por día.
   4. **R4 Orden:** las sesiones equivalentes de una materia van en días crecientes.
 
-Detalle completo en [`docs/propuesta_registrada.md`](docs/propuesta_registrada.md) y [`docs/decisiones_tecnicas.md`](docs/decisiones_tecnicas.md).
+El planteamiento completo, la implementación y el análisis de resultados se encuentran en el reporte técnico del proyecto.
 
 ## Requisitos
 
@@ -40,7 +40,6 @@ En la interfaz: **Espacio** reproduce o pausa, **←/→** avanzan un paso, **In
 ## Estructura
 
 ```
-├── docs/                 propuesta, decisiones técnicas, borrador y referencias (PDF)
 ├── src/
 │   ├── main.py           punto de entrada
 │   ├── modelo.py         entidades: Materia, Sesion, BloqueHorario, Asignacion, EstadoHorario, Escenario
