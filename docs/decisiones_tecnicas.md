@@ -204,25 +204,53 @@ Principios:
 ---
 
 ## 5. Casos de Resultados
-La plantilla exige al menos tres ejemplos **resueltos** y no triviales.
+La plantilla exige al menos tres ejemplos **resueltos** y no triviales. Los cuatro casos comparten materias, días y bloques; solo cambian las ocupaciones de los docentes (`src/escenarios.py`). Los resultados están fijados en `tests/test_escenarios.py`.
 
-| Caso | Escenario | Qué demuestra | Estado |
-|---|---|---|---|
-| 1. Base | Ocupaciones de la sección 2.5 | Funcionamiento normal (1 834 explorados, 83 retrocesos) | calibrado |
-| 2. Docente restringido | Un docente de una materia que se programa al final (p. ej. D6) con muy pocos bloques libres | La búsqueda no informada descubre tarde el conflicto, lo que causa muchos retrocesos | por calibrar |
-| 3. Séptimos saturados | Cada docente da su materia también a 7° B y 7° C (≈ 6 bloques ocupados cada uno) | Caso más realista y difícil que todavía tiene solución | por calibrar |
-| 4. Sin solución (opcional) | Un docente libre solo 2 días para una materia de 3 sesiones; materia temprana en el orden, para que la falla se detecte pronto | El algoritmo agota las alternativas y reporta que no hay solución | por calibrar |
+| Caso | Escenario | Ocupaciones | Explorados | Retrocesos | Eventos | Solución |
+|---|---|---|---|---|---|---|
+| 1. Base | Ocupaciones moderadas (sección 2.5) | 31 | 1 834 | 83 | 3 752 | sí |
+| 2. Docente restringido | Como el base, pero D6 (Formulación) **solo puede martes y jueves** | 39 | 10 611 | 522 | 21 745 | sí |
+| 3. Séptimos saturados | Cada docente da su materia también a 7° B y 7° C | 36 | 692 | 26 | 1 411 | sí |
+| 4. Sin solución | Como el base, pero D1 (IA) **solo puede martes y jueves** | 38 | 500 | 24 | 1 025 | no |
 
-Los casos 2 a 4 se calibran con la búsqueda ya implementada, para garantizar que tengan solución (o que no la tengan, en el caso 4) y un número de pasos razonable para la animación.
+Retrocesos por nivel (nivel = índice de la sesión, 0–17):
+
+| Caso | Retrocesos por nivel |
+|---|---|
+| 1 | 12: 1 · 13: 3 · 14: 16 · 15: 21 · 16: 42 |
+| 2 | 10: 1 · 11: 9 · 12: 55 · 13: 97 · 14: 284 · 15: 19 · 16: 57 |
+| 3 | 13: 2 · 14: 8 · 15: 6 · 16: 10 |
+| 4 | 0: 8 · 1: 16 |
+
+### 5.1 Cómo se obtuvieron
+- **Caso 2.** Se probaron patrones de disponibilidad que se pueden explicar ("solo ciertos días", "solo mañanas", etc.) para D5, D6 y D7. Se eligió D6 solo martes y jueves porque los retrocesos (6 veces los del caso 1) suben hasta el nivel 10, y porque la traza sigue siendo manejable para la animación. La variante "solo lunes y viernes" produce 1 783 retrocesos y 73 454 eventos.
+- **Caso 3.** Se generaron horarios válidos completos para 7° B y 7° C con los mismos docentes y sin choques entre ellos. Los bloques que ocupan pasan a ser las ocupaciones de 7° A, así que cada docente queda ocupado el doble de sesiones de su materia. En 300 combinaciones generadas, todas tuvieron solución, con 26 retrocesos como máximo; se eligió la de más retrocesos.
+- **Caso 4.** IA es la primera materia del orden y necesita 3 sesiones en días distintos (R3). Con D1 disponible solo 2 días no hay solución, y el agente lo demuestra rápido porque la falla ocurre en los niveles 0 y 1.
+
+### 5.2 Hallazgo para la discusión
+Se esperaba que el caso 3, con más ocupaciones, fuera el más difícil. **No lo fue.**
+- **Caso 3:** 36 ocupaciones y 26 retrocesos.
+- **Caso 2:** 39 ocupaciones y 522 retrocesos.
+
+La diferencia está en **dónde** caen las restricciones respecto al orden fijo de búsqueda:
+- En el caso 3 están repartidas entre todos los docentes, así que el agente descarta antes las opciones malas.
+- En el caso 2 se concentran en una materia que se programa casi al final, y el agente descubre el conflicto tarde, después de haber construido mucho horario que luego tiene que deshacer.
+
+Esto ilustra la limitación central de la búsqueda no informada: el orden en que se recorre el problema no aprovecha lo que ya se sabe de las restricciones. Es justo lo que corregiría una heurística como MRV (empezar por la sesión con menos opciones), que queda como trabajo futuro.
 
 ---
 
 ## 6. Trazas Manuales (preparación, no entregable)
-Dos escenarios reducidos para seguir a mano el árbol de búsqueda, con el mismo orden fijo y las mismas restricciones:
-1. **Sin retroceso:** pocas sesiones y bloques, donde la primera rama lleva directamente a la solución.
-2. **Con retroceso:** un escenario mínimo donde una ocupación de docente obliga a deshacer al menos una asignación.
+Dos escenarios reducidos (`ESCENARIOS_MINI` en `src/escenarios.py`) para seguir a mano el árbol de búsqueda, con el mismo orden fijo y las mismas restricciones:
+- 2 materias: M1 con dos sesiones (D1) y M2 con una sesión (D2).
+- 2 días (Lu, Ma) con 2 bloques cada uno (B1, B2).
 
-`crear_escenario(...)` acepta escenarios de cualquier tamaño (por ejemplo, 2 materias en 2 días). Los datos concretos se definirán junto con la implementación.
+| Escenario | Ocupaciones | Explorados | Retrocesos | Pasos (eventos) | Solución |
+|---|---|---|---|---|---|
+| Mini A — Sin retroceso | ninguna | 6 | 0 | 13 | M1.1 Lu-B1 · M1.2 Ma-B1 · M2.1 Lu-B2 |
+| Mini B — Con retroceso | D2 ocupado en Lu-B2 y Ma-B2 | 12 | 1 | 26 | M1.1 Lu-B1 · M1.2 Ma-B2 · M2.1 Ma-B1 |
+
+En el Mini B, M2.1 no cabe con M1.2 en Ma-B1: los bloques B1 están ocupados por el grupo y los B2 por el docente. El agente deshace M1.2, la mueve a Ma-B2 y entonces M2.1 entra en Ma-B1. La secuencia completa de pasos de ambos escenarios está fijada en `tests/test_escenarios.py`, para comparar con la traza hecha a mano.
 
 ---
 

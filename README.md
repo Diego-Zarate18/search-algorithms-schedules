@@ -39,7 +39,7 @@ python -m unittest -v     # ejecuta las pruebas
 ├── src/
 │   ├── main.py           punto de entrada
 │   ├── modelo.py         entidades: Materia, Sesion, BloqueHorario, Asignacion, EstadoHorario, Escenario
-│   ├── escenarios.py     datos de los casos (caso 1 calibrado; casos 2–4 pendientes)
+│   ├── escenarios.py     datos de los 4 casos y de los 2 escenarios mini
 │   ├── restricciones.py  reglas R1–R4 con motivo de rechazo
 │   ├── busqueda.py       agente DFS + eventos para la interfaz
 │   ├── metricas.py       estados explorados, retrocesos por nivel y tiempo
@@ -57,5 +57,5 @@ python -m unittest -v     # ejecuta las pruebas
 | Modelo y escenario base | listo |
 | Restricciones (R1–R4) y agente DFS con eventos | listo (reproduce el caso 1) |
 | Verificación final independiente | listo |
-| Casos 2–4 | pendiente (se calibran con la búsqueda) |
+| Casos 2–4 y escenarios mini | listo |
 | Gráficas e interfaz | pendiente |
