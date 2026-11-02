@@ -19,7 +19,7 @@
 
 ### 2.1 Grupo y aula
 - **Grupo objetivo:** 7° "A", Ingeniería en Tecnologías de la Información e Innovación Digital.
-- **Aula:** `Aula 7A` (única y fija). El validador comprueba su disponibilidad, aunque en este escenario nunca está ocupada por otro grupo.
+- **Aula:** el grupo tiene su propia aula (Aula 7A), donde se imparten todas sus clases. El aula no se busca ni se valida: el agente solo decide en qué bloque va cada sesión.
 
 ### 2.2 Materias, docentes y sesiones
 La carga semanal suma 35 h, que multiplicadas por 15 semanas dan las 525 h del cuatrimestre.
@@ -48,7 +48,7 @@ La carga semanal suma 35 h, que multiplicadas por 15 semanas dan las 525 h del c
 - Grupos 1°, 4°, 7° "B" y 7° "C": no se programan; solo aportan bloques ocupados de los docentes.
 - Estadías (6° y 10°): sin clases presenciales, fuera del modelo.
 - Tutoría grupal: no forma parte de la carga curricular, fuera del modelo.
-- Laboratorio y otras aulas: fuera del modelo; todas las sesiones son en `Aula 7A`.
+- Aulas y laboratorio: fuera del modelo; el grupo siempre ocupa su propia aula.
 
 ### 2.5 Matriz de ocupaciones previas de docentes
 Bloques en los que cada docente ya imparte clase a otros grupos y, por lo tanto, no está disponible para 7° "A". Es un escenario ficticio pero verosímil, calibrado con un prototipo para que **tenga solución** y **obligue a retroceder**.
@@ -77,14 +77,13 @@ Vista por bloque (docentes ocupados):
 ## 3. Modelo de Búsqueda
 
 ### 3.1 Estado
-Conjunto de asignaciones `(sesión, bloque, aula)`, donde `bloque = (día, B1..B4)`. Va de 0 a 18 asignaciones.
+Conjunto de asignaciones `(sesión, bloque)`, donde `bloque = (día, B1..B4)`. Va de 0 a 18 asignaciones.
 
 ### 3.2 Restricciones (validación de cada candidato)
 1. **Grupo:** el bloque no está ocupado por otra sesión de 7° "A".
 2. **Docente:** el docente de la materia no tiene ese bloque en la matriz de ocupaciones.
 3. **Distribución:** la materia no tiene otra sesión ese mismo día.
 4. **Orden de sesiones:** para sesiones equivalentes de una materia (todas las de 2 h), la sesión `k` va en un día estrictamente posterior a la sesión `k-1`. En Inglés aplica solo entre `M4.1` y `M4.2`; `M4.3` (1 h) puede ir en cualquier día libre para Inglés.
-5. **Aula:** `Aula 7A` libre en ese bloque (siempre se cumple en este escenario; se mantiene por generalidad).
 
 ### 3.3 Orden fijo de búsqueda (búsqueda no informada)
 - **Sesiones:** `M1.1, M1.2, M1.3, M2.1, …, M7.2` (orden de la tabla 2.2).
@@ -94,7 +93,7 @@ Conjunto de asignaciones `(sesión, bloque, aula)`, donde `bloque = (día, B1..B
 ### 3.4 Definición de métricas
 | Métrica | Definición operativa |
 |---|---|
-| Validez | El horario final cumple las 5 restricciones (verificación independiente al terminar). |
+| Validez | El horario final cumple las 4 restricciones (verificación independiente al terminar). |
 | Materias asignadas | Materias con todas sus sesiones colocadas (objetivo 7; 18 sesiones). |
 | Conflictos finales | Violaciones detectadas por la verificación final (objetivo 0). |
 | Estados explorados | Cada candidato `(sesión, bloque)` evaluado por el validador, sea válido o no. |
@@ -113,7 +112,7 @@ def dfs_backtracking(k):                    # k = índice de la sesión actual (
         for bloque in BLOQUES:              # B1 → B4
             metricas.estados_explorados += 1
             if validador.es_valida(sesion, dia, bloque, estado):
-                estado.agregar(sesion, dia, bloque, AULA)      # Actuador: asignar
+                estado.agregar(sesion, dia, bloque)            # Actuador: asignar
                 if dfs_backtracking(k + 1):
                     return True
                 estado.remover(sesion)                         # Actuador: deshacer
@@ -142,7 +141,7 @@ La implementación final debe reproducir exactamente estos valores, porque la b�
 ## 4. Estructura de Clases (propuesta)
 - `Sesion`: materia, docente, número de sesión, duración.
 - `EstadoHorario`: asignaciones actuales; agregar, remover y consultar ocupación.
-- `ValidadorRestricciones`: implementa las restricciones 1 a 5 y la verificación final.
+- `ValidadorRestricciones`: implementa las restricciones 1 a 4 y la verificación final.
 - `AgenteDFS`: búsqueda recursiva y registro de métricas.
 - `Metricas`: contadores, retrocesos por nivel y tiempo.
 - Módulo de datos: materias, bloques y matriz de ocupaciones (sección 2).
