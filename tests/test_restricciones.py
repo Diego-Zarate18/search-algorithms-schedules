@@ -1,2 +1,1 @@
-"""Pruebas de las restricciones del problema."""
-
+"""Pruebas de las restricciones R1–R4 (pendientes de implementar)."""
