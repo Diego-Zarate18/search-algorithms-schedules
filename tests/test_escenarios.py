@@ -2,8 +2,28 @@
 
 import unittest
 
-from src.escenarios import ESCENARIOS, OCUPACIONES_CASO_BASE, crear_caso_base
+from src.busqueda import AgenteDFS
+from src.escenarios import (
+    ESCENARIOS,
+    OCUPACIONES_CASO_BASE,
+    OCUPACIONES_CASO_DOCENTE_RESTRINGIDO,
+    OCUPACIONES_CASO_SEPTIMOS_SATURADOS,
+    OCUPACIONES_CASO_SIN_SOLUCION,
+    bloques_excepto,
+    crear_caso_base,
+)
 from src.modelo import total_horas
+from src.verificacion import verificar
+
+# Resultados de referencia (docs/decisiones_tecnicas.md, sección 5).
+REFERENCIA = {
+    "base": (True, 1834, 83, {12: 1, 13: 3, 14: 16, 15: 21, 16: 42}),
+    "docente_restringido": (
+        True, 10611, 522, {10: 1, 11: 9, 12: 55, 13: 97, 14: 284, 15: 19, 16: 57}
+    ),
+    "septimos_saturados": (True, 692, 26, {13: 2, 14: 8, 15: 6, 16: 10}),
+    "sin_solucion": (False, 500, 24, {0: 8, 1: 16}),
+}
 
 
 class CasoBaseTests(unittest.TestCase):
@@ -47,8 +67,65 @@ class CasoBaseTests(unittest.TestCase):
         self.assertEqual(self.escenario.grupo, "7° A")
         self.assertEqual(self.escenario.aula, "Aula 7A")
 
-    def test_registro_de_escenarios(self):
-        self.assertIn("base", ESCENARIOS)
+
+
+class CasosDeResultadosTests(unittest.TestCase):
+    def test_registro_de_los_cuatro_casos(self):
+        self.assertEqual(list(ESCENARIOS), list(REFERENCIA))
+
+    def test_los_casos_comparten_materias_y_bloques(self):
+        base = crear_caso_base()
+        for crear in ESCENARIOS.values():
+            escenario = crear()
+            self.assertEqual(escenario.materias, base.materias)
+            self.assertEqual(escenario.bloques, base.bloques)
+
+    def test_bloques_excepto(self):
+        bloques = bloques_excepto(("Ma", "Ju"))
+        self.assertEqual(len(bloques), 12)
+        self.assertNotIn("Ma-B1", bloques)
+        self.assertIn("Lu-B1", bloques)
+
+    def test_ocupaciones_de_cada_caso(self):
+        self.assertEqual(
+            {**OCUPACIONES_CASO_DOCENTE_RESTRINGIDO, "D6": OCUPACIONES_CASO_BASE["D6"]},
+            OCUPACIONES_CASO_BASE,
+        )
+        self.assertEqual(len(OCUPACIONES_CASO_DOCENTE_RESTRINGIDO["D6"]), 12)
+        self.assertEqual(
+            {k: len(v) for k, v in OCUPACIONES_CASO_SEPTIMOS_SATURADOS.items()},
+            {"D1": 6, "D2": 6, "D3": 6, "D4": 6, "D5": 4, "D6": 4, "D7": 4},
+        )
+        self.assertEqual(len(OCUPACIONES_CASO_SIN_SOLUCION["D1"]), 12)
+
+    def test_resultados_de_referencia(self):
+        for nombre, (encontrado, explorados, retrocesos, niveles) in REFERENCIA.items():
+            with self.subTest(caso=nombre):
+                escenario = ESCENARIOS[nombre]()
+                resultado = AgenteDFS(escenario, registrar_eventos=False).resolver()
+                metricas = resultado.metricas
+                self.assertEqual(resultado.encontrado, encontrado)
+                self.assertEqual(metricas.estados_explorados, explorados)
+                self.assertEqual(metricas.retrocesos, retrocesos)
+                self.assertEqual(metricas.retrocesos_por_nivel, niveles)
+                verificacion = verificar(escenario, resultado.estado)
+                self.assertEqual(verificacion.valido, encontrado)
+
+    def test_mas_restricciones_no_implica_mas_retrocesos(self):
+        """Hallazgo del caso 3: importa dónde caen las restricciones, no cuántas."""
+        def ocupaciones(caso):
+            return sum(len(v) for v in caso.values())
+
+        self.assertLess(
+            ocupaciones(OCUPACIONES_CASO_SEPTIMOS_SATURADOS),
+            ocupaciones(OCUPACIONES_CASO_DOCENTE_RESTRINGIDO),
+        )
+        self.assertGreater(
+            ocupaciones(OCUPACIONES_CASO_SEPTIMOS_SATURADOS),
+            ocupaciones(OCUPACIONES_CASO_BASE),
+        )
+        self.assertLess(REFERENCIA["septimos_saturados"][2], REFERENCIA["base"][2])
+        self.assertGreater(REFERENCIA["docente_restringido"][2], REFERENCIA["base"][2])
 
 
 if __name__ == "__main__":
