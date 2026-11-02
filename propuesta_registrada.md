@@ -4,12 +4,12 @@
 - Ruiz Pérez Brian Luis (Matrícula: 243738 - 7A)
 - Zárate Vázquez Diego Alberto (Matrícula: 243683 - 7A)
 
-> **Nota de versión:** este documento conserva la propuesta registrada e incorpora las precisiones acordadas para su implementación (modelado por sesiones, jornada de 8:00 a 16:00, aula fija y exclusiones de alcance). La versión original registrada se conserva en el historial del repositorio.
+> **Nota de versión:** este documento conserva la propuesta registrada e incorpora las precisiones acordadas para su implementación (modelado por sesiones, jornada de 8:00 a 16:00, aula del grupo fuera de la búsqueda y exclusiones de alcance). La versión original registrada se conserva en el historial del repositorio.
 
 ---
 
 ## 1. Descripción del Proyecto
-El proyecto consiste en diseñar un sistema de búsqueda que genere un horario académico válido para las siete materias de un grupo universitario, respetando las restricciones curriculares, la disponibilidad de los docentes y del aula, y los bloques horarios permitidos.
+El proyecto consiste en diseñar un sistema de búsqueda que genere un horario académico válido para las siete materias de un grupo universitario, respetando las restricciones curriculares, la disponibilidad de los docentes y los bloques horarios permitidos.
 
 El contexto corresponde al plan de estudios cuatrimestral de diez cuatrimestres de la Ingeniería en Tecnologías de la Información e Innovación Digital, en el que actualmente se encuentran activos los grupos de primero, cuarto, séptimo y décimo. Los cuatrimestres regulares tienen una carga total de 525 horas (35 horas semanales durante 15 semanas), mientras que sexto y décimo corresponden a estadías de 600 horas: Estadía TSU y Estadía Profesional, respectivamente.
 
@@ -23,7 +23,7 @@ Para mantener un alcance viable, el agente genera el horario de un único grupo 
 - **Grupo programado:** 7° "A", con siete materias y 35 horas semanales.
 - **Jornada:** lunes a viernes, de 8:00 a 16:00, dividida en 4 bloques de 2 horas por día (20 bloques semanales).
 - **Sesiones:** cada materia se divide en sesiones de 2 horas. Inglés VI (5 h) se divide en dos sesiones de 2 h y una de 1 h; la sesión de 1 h ocupa un bloque completo y la hora restante queda libre para el grupo. En total se programan 18 sesiones.
-- **Aula:** el grupo cuenta con un aula fija asignada (Aula 7A); todas sus sesiones se imparten en ella.
+- **Aula:** el grupo 7° "A" tiene asignada su propia aula (Aula 7A), en la que se imparten todas sus clases. Por ello, el aula no forma parte de la búsqueda: el problema consiste únicamente en ordenar el horario.
 - **Otros grupos (1°, 4°, 7° "B" y 7° "C"):** no se programan; sus horarios ya establecidos se representan como bloques ocupados de los docentes compartidos.
 - **Estadías (6° y 10°):** documentadas en el contexto, pero excluidas del modelo.
 - **Tutoría grupal:** excluida, ya que no forma parte de la carga curricular del plan de estudios. Puede ubicarse posteriormente en las horas libres del horario generado.
@@ -33,19 +33,19 @@ Para mantener un alcance viable, el agente genera el horario de un único grupo 
 ## 3. Formulación PEAS
 
 ### P – Performance (Medida de Desempeño)
-Generar un horario completo y válido para las siete materias del grupo seleccionado (18 sesiones), sin conflictos de horario, respetando la disponibilidad de los docentes y del aula, las restricciones curriculares y las ocupaciones fijas de los demás grupos.
+Generar un horario completo y válido para las siete materias del grupo seleccionado (18 sesiones), sin conflictos de horario, respetando la disponibilidad de los docentes, las restricciones curriculares y las ocupaciones fijas de los demás grupos.
 
 Como criterios secundarios, se registran el número de estados explorados y la cantidad de retrocesos necesarios para encontrar una solución.
 
 ### E – Environment (Entorno)
-Modelo estático y discreto de una universidad, compuesto por un grupo regular con siete materias divididas en sesiones, 20 bloques horarios semanales, siete docentes, un aula asignada, restricciones de asignación y ocupaciones previamente establecidas de los demás grupos activos.
+Modelo estático y discreto de una universidad, compuesto por un grupo regular con siete materias divididas en sesiones, 20 bloques horarios semanales, siete docentes, restricciones de asignación y ocupaciones previamente establecidas de los demás grupos activos.
 
 La carga horaria semanal de cada materia se considera una restricción curricular: determina cuántas sesiones deben programarse para ella.
 
 Se asume que toda la información utilizada está definida antes de comenzar la búsqueda y que no cambia durante su ejecución.
 
 ### A – Actuadores
-- Asignar una sesión pendiente a un bloque horario y al aula del grupo.
+- Asignar una sesión pendiente a un bloque horario.
 - Aceptar una asignación cuando cumple todas las restricciones.
 - Rechazar una asignación que genera conflictos.
 - Deshacer una asignación y probar otra alternativa mediante retroceso.
@@ -54,7 +54,6 @@ Se asume que toda la información utilizada está definida antes de comenzar la 
 ### S – Sensores
 - Lista de las siete materias y de las sesiones que deben programarse.
 - Docente responsable de cada materia y sus bloques ocupados con otros grupos.
-- Aula asignada al grupo y su disponibilidad.
 - Bloques horarios permitidos.
 - Carga horaria de cada materia.
 - Estado actual del horario parcial y conflictos detectados.
@@ -75,8 +74,8 @@ Se asume que toda la información utilizada está definida antes de comenzar la 
 ## 5. Transiciones
 - **INICIO:** horario del grupo sin asignaciones, con las 18 sesiones pendientes y con las ocupaciones de los docentes ya conocidas.
 - $\rightarrow$ Seleccionar la siguiente sesión pendiente (en un orden fijo).
-- $\rightarrow$ Asignarla a un bloque horario en el aula del grupo.
-- $\rightarrow$ Comprobar que no existan conflictos con el grupo, el docente, el aula ni las restricciones curriculares.
+- $\rightarrow$ Asignarla a un bloque horario.
+- $\rightarrow$ Comprobar que no existan conflictos con el grupo, el docente ni las restricciones curriculares.
 - $\rightarrow$ Si la asignación es válida, conservarla y continuar con la siguiente sesión.
 - $\rightarrow$ Si la asignación es inválida, probar el siguiente bloque; si ningún bloque es válido, retroceder, deshacer la asignación anterior y probar otra alternativa.
 - $\rightarrow$ Repetir el proceso hasta completar todas las sesiones.
@@ -87,9 +86,9 @@ Se asume que toda la información utilizada está definida antes de comenzar la 
 ## 6. Espacio de Estados
 Cada estado representa un horario parcial del grupo seleccionado. Se define como un conjunto de asignaciones:
 
-$$S = \{ (\text{sesión}, \text{bloque\_horario}, \text{aula}) \}$$
+$$S = \{ (\text{sesión}, \text{bloque\_horario}) \}$$
 
-donde cada sesión pertenece a una materia (por ejemplo, la sesión 2 de Fundamentos de Inteligencia Artificial). Un estado puede contener desde cero hasta 18 sesiones asignadas; una materia se considera asignada cuando todas sus sesiones han sido colocadas. Cada transición agrega una asignación válida o, cuando se detecta que no existe alternativa, deshace una asignación para probar otra.
+donde cada sesión pertenece a una materia (por ejemplo, la sesión 2 de Fundamentos de Inteligencia Artificial). El aula no se incluye en la asignación porque todas las sesiones se imparten en el aula del grupo. Un estado puede contener desde cero hasta 18 sesiones asignadas; una materia se considera asignada cuando todas sus sesiones han sido colocadas. Cada transición agrega una asignación válida o, cuando se detecta que no existe alternativa, deshace una asignación para probar otra.
 
 - **Estado inicial:** horario sin asignaciones para el grupo, junto con las restricciones y ocupaciones previamente establecidas.
 - **Estado objetivo:** horario completo en el que las 18 sesiones de las siete materias están asignadas y se cumplen todas las restricciones.
