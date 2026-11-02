@@ -1,0 +1,2 @@
+# Python 3.10+. Tkinter viene incluido con Python en Windows (instalador oficial).
+matplotlib>=3.5
