@@ -1,0 +1,19 @@
+# Grafo de conocimiento local (fuente de la verdad del equipo; no se versiona)
+.conocimiento/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Salidas generadas (se conservan las carpetas)
+salidas/**/*
+!salidas/**/
+!salidas/**/.gitkeep
+
+# Editores / sistema
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
