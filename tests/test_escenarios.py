@@ -5,12 +5,15 @@ import unittest
 from src.busqueda import AgenteDFS
 from src.escenarios import (
     ESCENARIOS,
+    ESCENARIOS_MINI,
     OCUPACIONES_CASO_BASE,
     OCUPACIONES_CASO_DOCENTE_RESTRINGIDO,
     OCUPACIONES_CASO_SEPTIMOS_SATURADOS,
     OCUPACIONES_CASO_SIN_SOLUCION,
     bloques_excepto,
     crear_caso_base,
+    crear_mini_con_retroceso,
+    crear_mini_sin_retroceso,
 )
 from src.modelo import total_horas
 from src.verificacion import verificar
@@ -126,6 +129,96 @@ class CasosDeResultadosTests(unittest.TestCase):
         )
         self.assertLess(REFERENCIA["septimos_saturados"][2], REFERENCIA["base"][2])
         self.assertGreater(REFERENCIA["docente_restringido"][2], REFERENCIA["base"][2])
+
+
+def resumir(eventos):
+    """Eventos como texto compacto: 'tipo sesión bloque motivo'."""
+    return [
+        " ".join(
+            x
+            for x in (
+                e.tipo.value,
+                e.sesion.id if e.sesion else "",
+                e.bloque.etiqueta if e.bloque else "",
+                e.motivo.name if e.motivo else "",
+            )
+            if x
+        )
+        for e in eventos
+    ]
+
+
+class EscenariosMiniTests(unittest.TestCase):
+    """Trazas exactas que deben coincidir con las trazas hechas a mano."""
+
+    def test_registro_de_escenarios_mini(self):
+        self.assertEqual(
+            list(ESCENARIOS_MINI), ["mini_sin_retroceso", "mini_con_retroceso"]
+        )
+        for crear in ESCENARIOS_MINI.values():
+            escenario = crear()
+            self.assertEqual(len(escenario.sesiones), 3)
+            self.assertEqual(len(escenario.bloques), 4)
+
+    def test_traza_mini_sin_retroceso(self):
+        resultado = AgenteDFS(crear_mini_sin_retroceso()).resolver()
+        self.assertEqual(resultado.metricas.retrocesos, 0)
+        self.assertEqual(
+            resumir(resultado.eventos),
+            [
+                "probar M1.1 Lu-B1",
+                "aceptar M1.1 Lu-B1",
+                "probar M1.2 Lu-B1",
+                "rechazar M1.2 Lu-B1 BLOQUE_OCUPADO_POR_GRUPO",
+                "probar M1.2 Lu-B2",
+                "rechazar M1.2 Lu-B2 MATERIA_YA_TIENE_SESION_ESE_DIA",
+                "probar M1.2 Ma-B1",
+                "aceptar M1.2 Ma-B1",
+                "probar M2.1 Lu-B1",
+                "rechazar M2.1 Lu-B1 BLOQUE_OCUPADO_POR_GRUPO",
+                "probar M2.1 Lu-B2",
+                "aceptar M2.1 Lu-B2",
+                "solucion",
+            ],
+        )
+
+    def test_traza_mini_con_retroceso(self):
+        escenario = crear_mini_con_retroceso()
+        resultado = AgenteDFS(escenario).resolver()
+        self.assertEqual(resultado.metricas.estados_explorados, 12)
+        self.assertEqual(resultado.metricas.retrocesos_por_nivel, {1: 1})
+        self.assertTrue(verificar(escenario, resultado.estado).valido)
+        self.assertEqual(
+            resumir(resultado.eventos),
+            [
+                "probar M1.1 Lu-B1",
+                "aceptar M1.1 Lu-B1",
+                "probar M1.2 Lu-B1",
+                "rechazar M1.2 Lu-B1 BLOQUE_OCUPADO_POR_GRUPO",
+                "probar M1.2 Lu-B2",
+                "rechazar M1.2 Lu-B2 MATERIA_YA_TIENE_SESION_ESE_DIA",
+                "probar M1.2 Ma-B1",
+                "aceptar M1.2 Ma-B1",
+                "probar M2.1 Lu-B1",
+                "rechazar M2.1 Lu-B1 BLOQUE_OCUPADO_POR_GRUPO",
+                "probar M2.1 Lu-B2",
+                "rechazar M2.1 Lu-B2 DOCENTE_OCUPADO",
+                "probar M2.1 Ma-B1",
+                "rechazar M2.1 Ma-B1 BLOQUE_OCUPADO_POR_GRUPO",
+                "probar M2.1 Ma-B2",
+                "rechazar M2.1 Ma-B2 DOCENTE_OCUPADO",
+                "retroceder M1.2 Ma-B1",
+                "probar M1.2 Ma-B2",
+                "aceptar M1.2 Ma-B2",
+                "probar M2.1 Lu-B1",
+                "rechazar M2.1 Lu-B1 BLOQUE_OCUPADO_POR_GRUPO",
+                "probar M2.1 Lu-B2",
+                "rechazar M2.1 Lu-B2 DOCENTE_OCUPADO",
+                "probar M2.1 Ma-B1",
+                "aceptar M2.1 Ma-B1",
+                "solucion",
+            ],
+        )
 
 
 if __name__ == "__main__":

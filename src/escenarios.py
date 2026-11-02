@@ -3,7 +3,8 @@
 Los cuatro casos de resultados comparten materias, días y bloques; solo
 cambian las ocupaciones de los docentes con otros grupos. Sus resultados
 de referencia están fijados en ``tests/test_escenarios.py`` y explicados
-en ``docs/decisiones_tecnicas.md`` (sección 5).
+en ``docs/decisiones_tecnicas.md`` (sección 5). Los escenarios mini
+(sección 6) son versiones reducidas para seguir la búsqueda a mano.
 """
 
 from __future__ import annotations
@@ -205,4 +206,50 @@ ESCENARIOS: dict[str, Callable[[], Escenario]] = {
     "docente_restringido": crear_caso_docente_restringido,
     "septimos_saturados": crear_caso_septimos_saturados,
     "sin_solucion": crear_caso_sin_solucion,
+}
+
+
+# Escenarios mini para trazas manuales: 2 materias, 2 días y 2 bloques por día.
+DEFINICION_BLOQUES_MINI: tuple[tuple[str, str, str], ...] = DEFINICION_BLOQUES[:2]
+DIAS_MINI: tuple[str, ...] = ("Lu", "Ma")
+
+
+def crear_materias_mini() -> tuple[Materia, ...]:
+    """M1 con dos sesiones (D1) y M2 con una sesión (D2)."""
+    return (
+        Materia("M1", "Materia A", "D1", (2, 2)),
+        Materia("M2", "Materia B", "D2", (2,)),
+    )
+
+
+def crear_mini_sin_retroceso() -> Escenario:
+    """Mini A: sin ocupaciones; la primera rama lleva a la solución (13 pasos)."""
+    return crear_escenario(
+        nombre="Mini A — Sin retroceso",
+        descripcion="Sin ocupaciones de docentes. No hace falta retroceder.",
+        materias=crear_materias_mini(),
+        ocupaciones={},
+        dias=DIAS_MINI,
+        definicion_bloques=DEFINICION_BLOQUES_MINI,
+    )
+
+
+def crear_mini_con_retroceso() -> Escenario:
+    """Mini B: D2 no puede en B2; M2 no cabe y se recoloca M1.2 (26 pasos)."""
+    return crear_escenario(
+        nombre="Mini B — Con retroceso",
+        descripcion=(
+            "D2 está ocupado en B2 ambos días. M2.1 no cabe con M1.2 en Ma-B1, "
+            "así que el agente deshace M1.2, la mueve a Ma-B2 y M2.1 entra en Ma-B1."
+        ),
+        materias=crear_materias_mini(),
+        ocupaciones={"D2": ("Lu-B2", "Ma-B2")},
+        dias=DIAS_MINI,
+        definicion_bloques=DEFINICION_BLOQUES_MINI,
+    )
+
+
+ESCENARIOS_MINI: dict[str, Callable[[], Escenario]] = {
+    "mini_sin_retroceso": crear_mini_sin_retroceso,
+    "mini_con_retroceso": crear_mini_con_retroceso,
 }
