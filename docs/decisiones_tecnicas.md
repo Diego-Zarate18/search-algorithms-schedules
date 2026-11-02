@@ -9,7 +9,7 @@
 ## 1. Arquitectura Técnica y Lenguaje
 - **Lenguaje:** Python 3.10+, orientado a objetos y organizado en módulos (paquete `src`, ejecución con `python -m src.main` desde la raíz).
 - **Interfaz visual:** Tkinter (incluido con Python). Requisito de la plantilla: capturas de la ventana con la especificación, la solución y la ejecución paso a paso.
-- **Gráficas:** `matplotlib` (retrocesos por nivel del árbol).
+- **Gráficas:** `matplotlib`, con la API de `Figure` (sin ventana). `python -m src.graficas` genera en `salidas/graficas/` los retrocesos por nivel de cada caso y una comparación de los casos.
 - **Pruebas:** `unittest` (`python -m unittest` desde la raíz).
 - **Descartado:** `pandas` (la tabla del horario se muestra en la interfaz) y una interfaz web (se eligió Tkinter).
 
@@ -205,7 +205,7 @@ La plantilla pide el tamaño y su proceso de cálculo. Se calcula por niveles, a
 │   ├── interfaz.py          Tkinter; dibuja el estado del reproductor
 │   ├── espacio_estados.py   tamaño del espacio de estados por niveles (python -m src.espacio_estados)
 │   ├── resultados.py        resumen por caso en salidas/resultados/ (python -m src.resultados)
-│   └── graficas.py          matplotlib
+│   └── graficas.py          gráficas PNG para el reporte (python -m src.graficas)
 ├── tests/                   pruebas por módulo + reproducción exacta de los casos
 └── salidas/                 gráficas y resultados generados (no versionados)
 ```
@@ -256,6 +256,8 @@ La diferencia está en **dónde** caen las restricciones respecto al orden fijo 
 
 El conteo de horarios válidos (sección 3.9) lo confirma: el caso 3 conserva unos 116 mil millones de horarios válidos, casi 5 veces los del caso 2 (unos 24 mil millones), a pesar de tener casi las mismas ocupaciones.
 
+La figura `salidas/graficas/comparacion_casos.png` muestra este contraste en paneles separados, cada uno con su propio eje: ocupaciones, estados explorados, retrocesos y horarios válidos.
+
 Esto ilustra la limitación central de la búsqueda no informada: el orden en que se recorre el problema no aprovecha lo que ya se sabe de las restricciones. Es justo lo que corregiría una heurística como MRV (empezar por la sesión con menos opciones), que queda como trabajo futuro.
 
 ---
@@ -285,5 +287,7 @@ En el Mini B, M2.1 no cabe con M1.2 en Ma-B1: los bloques B1 están ocupados por
 8. **Métricas de rendimiento:** enunciadas, explicadas y justificadas.
 9. **Heurísticas:** "No aplica", justificado; MRV como trabajo futuro.
 10. **Resultados:** casos 1–3 (y 4 opcional). Para cada uno: descripción, estado inicial y meta, solución, ejecución paso a paso y comentarios, con capturas **solo de la ventana** de la interfaz (o un video).
+    - Tablas: `salidas/resultados/resumen.md` (`python -m src.resultados`).
+    - Figuras: `retrocesos_<caso>.png` en los comentarios de cada caso y `comparacion_casos.png` en la discusión (`python -m src.graficas`).
 
 Regla de la plantilla: **toda figura, tabla, fórmula o cita debe referenciarse en el texto**; se penaliza si no.

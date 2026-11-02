@@ -31,6 +31,7 @@ Todos los comandos se ejecutan **desde la raíz del proyecto** (el código es el
 python -m src.main              # abre la interfaz (elegir caso → Ejecutar búsqueda → reproducir)
 python -m src.espacio_estados   # tamaño del espacio de estados por niveles
 python -m src.resultados        # resumen de los casos en salidas/resultados/
+python -m src.graficas          # gráficas de los casos en salidas/graficas/
 python -m unittest -v           # ejecuta las pruebas
 ```
 
@@ -52,7 +53,7 @@ En la interfaz: **Espacio** reproduce o pausa, **←/→** avanzan un paso, **In
 │   ├── interfaz.py       interfaz Tkinter que reproduce la búsqueda paso a paso
 │   ├── espacio_estados.py  tamaño del espacio de estados por niveles
 │   ├── resultados.py     resumen por caso (métricas, horarios válidos y horario final)
-│   └── graficas.py       gráficas con matplotlib
+│   └── graficas.py       gráficas de retrocesos por nivel y comparación de casos (PNG)
 ├── tests/                pruebas unitarias
 └── salidas/              gráficas y resultados generados (no se versionan)
 ```
@@ -67,4 +68,4 @@ En la interfaz: **Espacio** reproduce o pausa, **←/→** avanzan un paso, **In
 | Casos 2–4 y escenarios mini | listo |
 | Interfaz Tkinter con reproducción paso a paso | listo |
 | Espacio de estados y resumen de resultados | listo |
-| Gráficas | pendiente |
+| Gráficas de resultados | listo |
